@@ -10,7 +10,7 @@ ip_get_r3 = "10.10.3.1"
 
 port_r3= 35437 
 
-MAX_SEGMENT = 4000
+MAX_SEGMENT = 100
 
 sockR3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -37,21 +37,13 @@ def ip_checksum(data):  # Form the standard IP-suite checksum
     return chr(result / 256) + chr(result % 256)
 
 
-def readFile(filename, packet_size,offsping):
-    with open(filename) as file:
-        while True:
-            packet = file.read(packet_size)
-            if not packet:
-                break
-            yield packet
+# TODO implement sequence number 
 
-
-#Function to send a message
 def sendR3(ip,port):
     print "Sending from S "
     i = 0
 
-    with open("input.txt") as f:
+    with open("di.txt") as f:
         content = f.read()
     
     print len(content)
@@ -63,22 +55,26 @@ def sendR3(ip,port):
         else:
             segment = content[offset:offset+MAX_SEGMENT]
         offset += MAX_SEGMENT
-        print i
-        i += 1
         print "offset : ",offset
         print "segment size : ", len(segment)
 
         ack_received = False
         while not ack_received:
+
+            sockR3.settimeout(1)
             checksum = ip_checksum(segment)
             print "Size of checksum" , len(checksum)
             sockR3.sendto( checksum+ segment , (ip, port))  #send message to r3
-            print "\nFinished sending \n"
+            print "Sending packet ", segment
+            print "Finished sending packet ", i
+            
+            i += 1
             try:
                 print "wait for ackk"
-                data, server = sockR3.recvfrom(4096) #wait for ACK from r3
+                data, server = sockR3.recvfrom(1024) #wait for ACK from r3
             except: 
-                print "Error occured in R3-S"
+                print "Couldn't get the ACK"
+                pass
             else:
                 print "Received : ", data
                 if data[3] == '0':
@@ -88,6 +84,8 @@ def sendR3(ip,port):
                     print "NAK Received"
                 else:
                     print "Invalid return data"
+    sockR3.sendto("EOF",(ip, port))
+
 
 if __name__ == "__main__":
 

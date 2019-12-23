@@ -34,19 +34,31 @@ def ip_checksum(data):  # Form the standard IP-suite checksum
     result = result >> 8 | ((result & 0xff) << 8)  # Swap bytes
     return chr(result / 256) + chr(result % 256)
 
+# TODO implement sequence number 
+
 #Function to get a message
 def getR3(ip,port):
 
     expecting_seq = 0
-
-    while True:
-        data, addr = sockR3.recvfrom(4096) 
+    i = 0
+    sockR3.settimeout(100)
+    isEOF =False
+    while not isEOF:
+        
+        data, addr = sockR3.recvfrom(1024) 
         checksum = data[:2]
         content = data[2:]
 
+        if data == "EOF":
+            isEOF = True
+            break
+
         if ip_checksum(content) == checksum:  ## correct file arrived
+            f.write("i is "+ str(i)+ "\n")
             f.write(content)
-            print "Message received rom D to R3: ", data[0:10]
+            print "Message received rom D to R3: ", content
+            print "Number is ",i
+            i +=1
             sockR3.sendto("ACK0", addr) #Sends ACK       
         else: ##wrong file
             sockR3.sendto("ACK1", addr)

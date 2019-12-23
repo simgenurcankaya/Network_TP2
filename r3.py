@@ -24,24 +24,34 @@ sockD = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockS.bind((ip_get_s,port_s)) #binding the ports
 
 def getS():
-    print "Now getting from S " 
-    try:
-        datafromS, addressS = sockS.recvfrom(4096)  #waiting for data
-        print "Data received from S, now sending it to D"
-        sockD.sendto(datafromS , (ip_send_d,port_d)) #sends the received data from S to D
-    except:
-        print "Error when sending the data to D"
-    try:
-        datafromD, addressD = sockD.recvfrom(4096) #Waits for ACK from D
-        print "Data from D : ", datafromD
-        print "Data received from D, now sending it back to S"
-        sockS.sendto(datafromD, addressS) #Sends ACK to S
-    except:
-        print "Error when sending the ack to S"
+    i = 0
+    isEOF = False
+    while not isEOF:
+        print "Now getting from S number " ,i
+        
+        try: 
+            sockS.settimeout(1)
+            sockD.settimeout(1)
+            datafromS, addressS = sockS.recvfrom(1024)  #waiting for data
+            i += 1 
+            if datafromS == "EOF":
+                isEOF = True
+            print "Data received from S, now sending it to D"
+            sockD.sendto(datafromS , (ip_send_d,port_d)) #sends the received data from S to D
+        except:
+            print "Error when sending the data to D"
+            pass
+        try:
+            datafromD, addressD = sockD.recvfrom(1024) #Waits for ACK from D
+            print "Data from D : ", datafromD
+            print "Data received from D, now sending it back to S"
+            sockS.sendto(datafromD, addressS) #Sends ACK to S
+        except:
+            print "Error when sending the ack to S"
+            pass
 
 
 if __name__ == "__main__":
-    while 1:
-        getS()
+    getS()
 
     print("Done!") 
