@@ -27,18 +27,17 @@ def getS():
     print "Now getting from S " 
     try:
         datafromS, addressS = sockS.recvfrom(4096)  #waiting for data
-    except: 
-        print "Error occured in R3-S" #timeout
-
-    print "Data received from S, now sending it to D"
-    sockD.sendto(datafromS , (ip_send_d,port_d)) #sends the received data from S to D
+        print "Data received from S, now sending it to D"
+        sockD.sendto(datafromS , (ip_send_d,port_d)) #sends the received data from S to D
+    except:
+        print "Error when sending the data to D"
     try:
         datafromD, addressD = sockD.recvfrom(4096) #Waits for ACK from D
-    except: 
-        print "Error occured in R3-D"
-    print "Data received from D, now sending it back to S"
-    sockS.sendto(datafromD, addressS) #Sends ACK to S
-
+        print "Data from D : ", datafromD
+        print "Data received from D, now sending it back to S"
+        sockS.sendto(datafromD, addressS) #Sends ACK to S
+    except:
+        print "Error when sending the ack to S"
 
 
 if __name__ == "__main__":

@@ -67,14 +67,27 @@ def sendR3(ip,port):
         i += 1
         print "offset : ",offset
         print "segment size : ", len(segment)
-        sockR3.sendto(segment , (ip, port))  #send message to r3
-        print "\nFinished sending \n"
-        try:
-            data, server = sockR3.recvfrom(4096) #wait for ACK from r3
-            print "Received : ", data
-        except: 
-            print "Error occured in R3-S"
-   
+
+        ack_received = False
+        while not ack_received:
+            checksum = ip_checksum(segment)
+            print "Size of checksum" , len(checksum)
+            sockR3.sendto( checksum+ segment , (ip, port))  #send message to r3
+            print "\nFinished sending \n"
+            try:
+                print "wait for ackk"
+                data, server = sockR3.recvfrom(4096) #wait for ACK from r3
+            except: 
+                print "Error occured in R3-S"
+            else:
+                print "Received : ", data
+                if data[3] == '0':
+                    print "ACK Received"
+                    ack_received = True
+                elif data[3] == '1':
+                    print "NAK Received"
+                else:
+                    print "Invalid return data"
 
 if __name__ == "__main__":
 
