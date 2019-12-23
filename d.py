@@ -33,33 +33,38 @@ def ip_checksum(data):  # Form the standard IP-suite checksum
     result = (~ sum) & 0xffff  # Keep lower 16 bits
     result = result >> 8 | ((result & 0xff) << 8)  # Swap bytes
     return chr(result / 256) + chr(result % 256)
-
-# TODO implement sequence number 
+ 
 
 #Function to get a message
 def getR3(ip,port):
 
-    expecting_seq = 0
+    expecting_seq = 0  #expected sequence number, initial value = 0 , alternates bw 0,1,0,1..
     i = 0
     sockR3.settimeout(100)
     isEOF =False
     while not isEOF:
         
         data, addr = sockR3.recvfrom(1024) 
-        checksum = data[:2]
-        content = data[2:]
+        checksum = data[:2]  #checksum
+        seq = data[2] #seq number 
+        content = data[3:] #packet received
 
-        if data == "EOF":
+        if data == "EOF": #EOF is reached, terminate. 
             isEOF = True
             break
 
-        if ip_checksum(content) == checksum:  ## correct file arrived
-            f.write("i is "+ str(i)+ "\n")
-            f.write(content)
-            print "Message received rom D to R3: ", content
-            print "Number is ",i
-            i +=1
+        if ip_checksum(content) == checksum:  ## file arrived correctly
             sockR3.sendto("ACK0", addr) #Sends ACK       
+            if str(expecting_seq) == seq:  #expected seq arrived, save it 
+                print "Message received rom D to R3: ", content
+                print "Number is ",i
+                i +=1
+                f.write("i is "+ str(i)+ "\n")
+                f.write(content)
+                expecting_seq = 1-expecting_seq # alternates bw 0,1,0,1,0....
+            else:
+                print "----- FILE WITH WRONG SEQ NUMBER HAS ARRIVED -----"
+                
         else: ##wrong file
             sockR3.sendto("ACK1", addr)
 

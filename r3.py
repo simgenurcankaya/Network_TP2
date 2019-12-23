@@ -25,16 +25,15 @@ sockS.bind((ip_get_s,port_s)) #binding the ports
 
 def getS():
     i = 0
-    isEOF = False
+    isEOF = False  #Check if the input ended to close the socket.
     while not isEOF:
         print "Now getting from S number " ,i
-        
         try: 
-            sockS.settimeout(1)
+            sockS.settimeout(1)  #set timeout to both sockets
             sockD.settimeout(1)
             datafromS, addressS = sockS.recvfrom(1024)  #waiting for data
             i += 1 
-            if datafromS == "EOF":
+            if datafromS == "EOF":  #EOF reached, send it to the D, then terminate.
                 isEOF = True
             print "Data received from S, now sending it to D"
             sockD.sendto(datafromS , (ip_send_d,port_d)) #sends the received data from S to D

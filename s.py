@@ -43,31 +43,30 @@ def sendR3(ip,port):
     print "Sending from S "
     i = 0
 
-    with open("di.txt") as f:
+    with open("di.txt") as f:  #read input file 
         content = f.read()
     
     print len(content)
-    offset = 0
-    segment = 0
+    offset = 0  # where to start taking the data sending
+    segment = 0 # the data that will be send
+    seq = 0 # sequence number
     while offset < len(content):
-        if offset + MAX_SEGMENT > len(content):
+        if offset + MAX_SEGMENT > len(content):  # if there is not enough data left to full a mac segment
             segment = content[offset:]
         else:
-            segment = content[offset:offset+MAX_SEGMENT]
-        offset += MAX_SEGMENT
+            segment = content[offset:offset+MAX_SEGMENT]  # there is plenty of data
+        offset += MAX_SEGMENT  #increase the offset
         print "offset : ",offset
         print "segment size : ", len(segment)
 
-        ack_received = False
+        ack_received = False  # wait for ACK before sending another packet
         while not ack_received:
-
-            sockR3.settimeout(1)
-            checksum = ip_checksum(segment)
+            sockR3.settimeout(1)  # set timeout to the socket 
+            checksum = ip_checksum(segment)  # calculate checksum
             print "Size of checksum" , len(checksum)
-            sockR3.sendto( checksum+ segment , (ip, port))  #send message to r3
+            sockR3.sendto( checksum+ str(seq)+  segment , (ip, port))  #send message to r3
             print "Sending packet ", segment
             print "Finished sending packet ", i
-            
             i += 1
             try:
                 print "wait for ackk"
@@ -84,7 +83,9 @@ def sendR3(ip,port):
                     print "NAK Received"
                 else:
                     print "Invalid return data"
-    sockR3.sendto("EOF",(ip, port))
+        seq = 1 - seq #alternates between 1,0,1,0...
+
+    sockR3.sendto("EOF",(ip, port)) #Send EOF when the file ends.
 
 
 if __name__ == "__main__":
