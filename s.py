@@ -1,25 +1,18 @@
 import threading
 import socket
+import time
 
-## IP's for S node
-ip_send_r1 = "10.10.1.2"
-ip_get_r1 = "10.10.1.1"
-ip_send_r2= "10.10.2.1"
-ip_get_r2 = "10.10.2.2"
-ip_send_r3 = "10.10.3.2"
+#For the experiment we only needed S-R3-D implementation,
+#so other ports are not implemented.
+#S sends and receives only from R3
+ip_send_r3 = "10.10.3.2"    
 ip_get_r3 = "10.10.3.1"
 
-#Ports for S node
-port_r1= 35435 
-port_r2= 35436 
 port_r3= 35437 
 
-#Sockets used in S
-sockR1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sockR2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+MAX_SEGMENT = 4000
+
 sockR3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-
 
 # Code taken from http://codewiki.wikispaces.com/ip_checksum.py.
 
@@ -43,8 +36,8 @@ def ip_checksum(data):  # Form the standard IP-suite checksum
     result = result >> 8 | ((result & 0xff) << 8)  # Swap bytes
     return chr(result / 256) + chr(result % 256)
 
-        
-def readFile(filename, packet_size=800):
+
+def readFile(filename, packet_size,offsping):
     with open(filename) as file:
         while True:
             packet = file.read(packet_size)
@@ -53,62 +46,38 @@ def readFile(filename, packet_size=800):
             yield packet
 
 
+#Function to send a message
+def sendR3(ip,port):
+    print "Sending from S "
+    i = 0
 
-def sendR3():
+    with open("input.txt") as f:
+        content = f.read()
+    
+    print len(content)
     offset = 0
-    seq = 0
-    i =0
-    print "Sending ... \n"
-    while i<7:
-        i+=1
-        print "i now : ",i
-        rows_generator = readFile("input.txt",900)
-        txt = next(rows_generator, None)
-
-#        txt = readFile("input.txt",900)
- 
-        packet = txt[0:]
-        ack_received = False
-        while not ack_received:
-            print "Sending to R3 \n"
-            sockR3.sendto(ip_checksum(packet) + str(seq) + packet, (ip_send_r3,port_r3))
-            try:
-                message, address = sockR3.recvfrom(4096)
-            except:
-                print "Timeout"
-            
-            print message[0::10]
-            checksum = message[:2]
-            ack_seq = message[5]
-            if ip_checksum(message[2:]) == checksum and ack_seq == str(seq):
-                print "Ack received! \n"
-                ack_received = True
-
-        seq = 1 - seqf
+    segment = 0
+    while offset < len(content):
+        if offset + MAX_SEGMENT > len(content):
+            segment = content[offset:]
+        else:
+            segment = content[offset:offset+MAX_SEGMENT]
+        offset += MAX_SEGMENT
+        print i
+        i += 1
+        print "offset : ",offset
+        print "segment size : ", len(segment)
+        sockR3.sendto(segment , (ip, port))  #send message to r3
+        print "\nFinished sending \n"
+        try:
+            data, server = sockR3.recvfrom(4096) #wait for ACK from r3
+            print "Received : ", data
+        except: 
+            print "Error occured in R3-S"
+   
 
 if __name__ == "__main__":
-    sendR3()
-  
-    # t1 = threading.Thread(target=getR1, args=(ip_get_r1,po rt_r1)) 
-    # t2 = threading.Thread(target=getR2, args=(ip_get_r2,port_r2)) 
-    # t3 = threading.Thread(target=getR3, args=(ip_get_r3,port_r3))
-    # # starting thread 1 
-    # t1.start() 
-    # # starting thread 2 
-    # t2.start() 
-    # # starting thread 3
-    # t3.start()
-    # # wait until thread 1 is completely executed 
-    # t1.join() 
-    # # wait until thread 2 is completely executed 
-    # t2.join() 
-    # # wait until thread 3 is completely executed 
-    # t3.join()
 
-    # print t1.isAlive()
-    # print t2.isAlive()
-    # print t3.isAlive()
+    sendR3(ip_send_r3,port_r3)
 
-    # both threads completely executed 
     print("Done!") 
-
