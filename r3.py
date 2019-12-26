@@ -33,26 +33,26 @@ def getS1():
     i = 0
     isEOF = False  #Check if the input ended to close the socket.
     while not isEOF or TimeoutError:
-        print "Now getting from S number " ,i
+        print "Thread 1 Now getting from S number " ,i
         try: 
             sockS1.settimeout(1)  #set timeout to both sockets
             sockD1.settimeout(1)
-            datafromS, addressS = sockS1.recvfrom(1024)  #waiting for data
+            datafromS1, addressS1 = sockS1.recvfrom(1024)  #waiting for data
             i += 1 
-            if datafromS == "EOF":  #EOF reached, send it to the D, then terminate.
+            if datafromS1 == "EOF":  #EOF reached, send it to the D, then terminate.
                 isEOF = True
-            print "Data received from S, now sending it to D"
-            sockD1.sendto(datafromS , (ip_send_d,port1_d)) #sends the received data from S to D
+            print "Thread 1 Data received from S, now sending it to D"
+            sockD1.sendto(datafromS1 , (ip_send_d,port1_d)) #sends the received data from S to D
         except:
-            print "Error when sending the data to D"
+            print "Thread 1 Error when sending the data to D"
             pass
         try:
             datafromD, addressD = sockD1.recvfrom(1024) #Waits for ACK from D
-            print "Data from D : ", datafromD
-            print "Data received from D, now sending it back to S"
-            sockS2.sendto(datafromD, addressS) #Sends ACK to S
+            print "Thread 1 Data from D : ", datafromD
+            print "Thread 1 Data received from D, now sending it back to S"
+            sockS1.sendto(datafromD1, (ip_send_s,port1_s)) #Sends ACK to S
         except:
-            print "Error when sending the ack to S"
+            print "Thread 1 Error when sending the ack to S"
             pass
 
 
@@ -60,26 +60,26 @@ def getS2( ):
     i = 0
     isEOF = False  #Check if the input ended to close the socket.
     while not isEOF or TimeoutError:
-        print "Now getting from S number " ,i
+        print "Thread 2 Now getting from S number " ,i
         try: 
             sockS2.settimeout(1)  #set timeout to both sockets
             sockD2.settimeout(1)
-            datafromS, addressS = sockS2.recvfrom(1024)  #waiting for data
+            datafromS2, addressS2 = sockS2.recvfrom(1024)  #waiting for data
             i += 1 
-            if datafromS == "EOF":  #EOF reached, send it to the D, then terminate.
+            if datafromS2 == "EOF":  #EOF reached, send it to the D, then terminate.
                 isEOF = True
-            print "Data received from S, now sending it to D"
-            sockD2.sendto(datafromS , (ip_send_d,port2_d)) #sends the received data from S to D
+            print "Thread 2 Data received from S, now sending it to D"
+            sockD2.sendto(datafromS2 , (ip_send_d,port2_d)) #sends the received data from S to D
         except:
-            print "Error when sending the data to D"
+            print "Thread 2 Error when sending the data to D"
             pass
         try:
             datafromD, addressD = sockD2.recvfrom(1024) #Waits for ACK from D
-            print "Data from D : ", datafromD
-            print "Data received from D, now sending it back to S"
-            sockS2.sendto(datafromD, addressS) #Sends ACK to S
+            print "Thread 2 Data from D : ", datafromD
+            print "Thread 2 Data received from D, now sending it back to S"
+            sockS2.sendto(datafromD, addressS2) #Sends ACK to S
         except:
-            print "Error when sending the ack to S"
+            print "Thread 2 Error when sending the ack to S"
             pass
 
 if __name__ == "__main__":

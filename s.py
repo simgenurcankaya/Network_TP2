@@ -16,8 +16,15 @@ window = [0,0]  #if acks received turns to  [1,1]
 
 MAX_SEGMENT = 100
 
-sockR3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sockR3.settimeout(1)  # set timeout to the socket 
+sock1_R3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock2_R3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+sock1_R3.bind((ip_get_r3,port1_r3))
+sock2_R3.bind((ip_get_r3,port2_r3))
+
+sock1_R3.settimeout(1)  # set timeout to the socket 
+sock2_R3.settimeout(1)  # set timeout to the socket 
+
 
 # Code taken from http://codewiki.wikispaces.com/ip_checksum.py.
 
@@ -49,14 +56,20 @@ def packetSender(i,ip,port,segment,seq):
     # wait for ACK before sending another packet
     while window[i] == 0:
         checksum = ip_checksum(segment)  # calculate checksum
-        sockR3.sendto(checksum+ str(seq)+  segment , (ip, port))  #send message to r3
+        if i == 0:
+            sock1_R3.sendto(checksum+ str(seq)+  segment , (ip, port))  #send message to r3
+        else:
+            sock2_R3.sendto(checksum+ str(seq)+  segment , (ip, port))  #send message to r3
         print "sending data ",i
         print segment[0:10]
         # print "Sending packet ", segment
         print "Finished sending packet ",i
         try:
             print "wait for ackk",i
-            data, server = sockR3.recvfrom(1024) #wait for ACK from r3
+            if i == 0:
+                data, server = sock1_R3.recvfrom(1024) #wait for ACK from r3
+            else:
+                data, server = sock2_R3.recvfrom(1024) #wait for ACK from r3
         except: 
             print "Couldn't get the ACK",i
             pass
@@ -115,6 +128,7 @@ def sendR3(ip):
         print "Threads ended"
         
 
+    print "Sending EOFF ",seq
         
     thread1 = threading.Thread(target=packetSender, args=(0,ip,port1_r3,"EOF",seq)).start()
     thread2 = threading.Thread(target=packetSender, args=(1,ip,port2_r3,"EOF",seq+1)).start()
