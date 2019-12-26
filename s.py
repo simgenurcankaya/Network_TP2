@@ -8,11 +8,16 @@ import time
 ip_send_r3 = "10.10.3.2"    
 ip_get_r3 = "10.10.3.1"
 
-port_r3= 35437 
+port1_r3 = 35437 
+port2_r3 = 35438
+number_of_ack = 0
 
-MAX_SEGMENT = 100
+window = [0,0]  #if acks received turns to  [1,1]
+
+MAX_SEGMENT = 995
 
 sockR3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sockR3.settimeout(1)  # set timeout to the socket 
 
 # Code taken from http://codewiki.wikispaces.com/ip_checksum.py.
 
@@ -38,58 +43,79 @@ def ip_checksum(data):  # Form the standard IP-suite checksum
 
 
 # TODO implement sequence number 
+def packetSender(i,ip,port,segment,seq):
+    global window
+    global number_of_ack
+    # wait for ACK before sending another packet
+    while window[i] == 0:
+        checksum = ip_checksum(segment)  # calculate checksum
+        sockR3.sendto(checksum+ str(seq)+  segment , (ip, port))  #send message to r3
+        # print "Sending packet ", segment
+        print "Finished sending packet "
+        try:
+            print "wait for ackk"
+            data, server = sockR3.recvfrom(1024) #wait for ACK from r3
+        except: 
+            print "Couldn't get the ACK"
+            pass
+        else:
+            print "Received : ", data
+            if data[3] == '0':
+                print "ACK Received"
+                window[i] = 1
+                number_of_ack +=1
+            elif data[3] == '1':
+                print "NAK Received"
+            else:
+                print "Invalid return data"
 
-def sendR3(ip,port):
+
+def sendR3(ip):
+    global window
     print "Sending from S "
-    i = 0
-
-    with open("di.txt") as f:  #read input file 
+    
+    with open("input.txt") as f:  #read input file 
         content = f.read()
     
     print len(content)
     offset = 0  # where to start taking the data sending
-    segment = 0 # the data that will be send
+    segment1 = 0 # the data that will be send
+    segment2 = 0
     seq = 0 # sequence number
     while offset < len(content):
-        if offset + MAX_SEGMENT > len(content):  # if there is not enough data left to full a mac segment
-            segment = content[offset:]
-        else:
-            segment = content[offset:offset+MAX_SEGMENT]  # there is plenty of data
-        offset += MAX_SEGMENT  #increase the offset
-        print "offset : ",offset
-        print "segment size : ", len(segment)
-
-        ack_received = False  # wait for ACK before sending another packet
-        while not ack_received:
-            sockR3.settimeout(1)  # set timeout to the socket 
-            checksum = ip_checksum(segment)  # calculate checksum
-            print "Size of checksum" , len(checksum)
-            sockR3.sendto( checksum+ str(seq)+  segment , (ip, port))  #send message to r3
-            print "Sending packet ", segment
-            print "Finished sending packet ", i
-            i += 1
-            try:
-                print "wait for ackk"
-                data, server = sockR3.recvfrom(1024) #wait for ACK from r3
-            except: 
-                print "Couldn't get the ACK"
-                pass
+        if offset + MAX_SEGMENT + MAX_SEGMENT> len(content):  # if there is not enough data left to full a mac segment
+            if offset + MAX_SEGMENT < len(content):  #first segment full secons segment not
+                segment1 = content[offset:offset+MAX_SEGMENT]
+                segment2 = content[offset+MAX_SEGMENT:]
             else:
-                print "Received : ", data
-                if data[3] == '0':
-                    print "ACK Received"
-                    ack_received = True
-                elif data[3] == '1':
-                    print "NAK Received"
-                else:
-                    print "Invalid return data"
-        seq = 1 - seq #alternates between 1,0,1,0...
+                segment1 = content[offset:]
+                segment2 = 0
+        else:
+            segment1 = content[offset:offset+MAX_SEGMENT]  # there is plenty of data
+            segment2 = content[offset+MAX_SEGMENT:offset+MAX_SEGMENT+MAX_SEGMENT]
+        offset += MAX_SEGMENT + MAX_SEGMENT  #increase the offset
+        print "offset : ",offset
+        print "segment size : ", len(segment1)
 
+        window = [0,0]
+        number_of_ack = 0
+        thread1 = threading.Thread(target=packetSender, args=(1,ip,port1_r3,segment1,seq))
+        thread2 = threading.Thread(target=packetSender, args=(2,ip,port2_r3,segment2,seq+1))
+
+        seq  = (seq+2) %4
+        print "Starting the threads"
+        thread1.start()
+        thread2.start()
+        thread1.join()
+        thread2.join()
+        print "Threads ended"
+
+        
     sockR3.sendto("EOF",(ip, port)) #Send EOF when the file ends.
 
 
 if __name__ == "__main__":
 
-    sendR3(ip_send_r3,port_r3)
+    sendR3(ip_send_r3)
 
     print("Done!") 
