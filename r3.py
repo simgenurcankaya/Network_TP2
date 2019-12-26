@@ -27,7 +27,7 @@ sockD1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockD2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 sockS1.bind((ip_get_s,port1_s)) #binding the ports
-sockS1.bind((ip_get_s,port2_s)) #binding the ports
+sockS2.bind((ip_get_s,port2_s)) #binding the ports
 
 def getS1():
     i = 0
@@ -84,7 +84,9 @@ def getS2( ):
 
 if __name__ == "__main__":
 
-    threading.Thread(target=getS1, args=().start()
-    threading.Thread(target=getS2, args=().start()
+    x = threading.Thread(target=getS1, args=())
+    y = threading.Thread(target=getS2, args=())
 
+    x.start()
+    y.start()
     print("Done!") 

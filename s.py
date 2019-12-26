@@ -14,7 +14,7 @@ number_of_ack = 0
 
 window = [0,0]  #if acks received turns to  [1,1]
 
-MAX_SEGMENT = 995
+MAX_SEGMENT = 100
 
 sockR3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockR3.settimeout(1)  # set timeout to the socket 
@@ -50,31 +50,34 @@ def packetSender(i,ip,port,segment,seq):
     while window[i] == 0:
         checksum = ip_checksum(segment)  # calculate checksum
         sockR3.sendto(checksum+ str(seq)+  segment , (ip, port))  #send message to r3
+        print "sending data ",i
+        print segment[0:10]
         # print "Sending packet ", segment
-        print "Finished sending packet "
+        print "Finished sending packet ",i
         try:
-            print "wait for ackk"
+            print "wait for ackk",i
             data, server = sockR3.recvfrom(1024) #wait for ACK from r3
         except: 
-            print "Couldn't get the ACK"
+            print "Couldn't get the ACK",i
             pass
         else:
             print "Received : ", data
             if data[3] == '0':
-                print "ACK Received"
+                print "ACK Received",i
                 window[i] = 1
                 number_of_ack +=1
             elif data[3] == '1':
-                print "NAK Received"
+                print "NAK Received",i
             else:
-                print "Invalid return data"
+                print "Invalid return data" ,i 
 
 
 def sendR3(ip):
     global window
+    global number_of_ack
     print "Sending from S "
     
-    with open("input.txt") as f:  #read input file 
+    with open("di.txt") as f:  #read input file 
         content = f.read()
     
     print len(content)
@@ -89,18 +92,19 @@ def sendR3(ip):
                 segment2 = content[offset+MAX_SEGMENT:]
             else:
                 segment1 = content[offset:]
-                segment2 = 0
+                segment2 = "0"
         else:
             segment1 = content[offset:offset+MAX_SEGMENT]  # there is plenty of data
             segment2 = content[offset+MAX_SEGMENT:offset+MAX_SEGMENT+MAX_SEGMENT]
         offset += MAX_SEGMENT + MAX_SEGMENT  #increase the offset
         print "offset : ",offset
-        print "segment size : ", len(segment1)
+        print "segment1 size : ", len(segment1)
+        print "segment2 size : ", len(segment2)
 
         window = [0,0]
         number_of_ack = 0
-        thread1 = threading.Thread(target=packetSender, args=(1,ip,port1_r3,segment1,seq))
-        thread2 = threading.Thread(target=packetSender, args=(2,ip,port2_r3,segment2,seq+1))
+        thread1 = threading.Thread(target=packetSender, args=(0,ip,port1_r3,segment1,seq))
+        thread2 = threading.Thread(target=packetSender, args=(1,ip,port2_r3,segment2,seq+1))
 
         seq  = (seq+2) %4
         print "Starting the threads"
@@ -109,9 +113,11 @@ def sendR3(ip):
         thread1.join()
         thread2.join()
         print "Threads ended"
+        
 
         
-    sockR3.sendto("EOF",(ip, port)) #Send EOF when the file ends.
+    thread1 = threading.Thread(target=packetSender, args=(0,ip,port1_r3,"EOF",seq)).start()
+    thread2 = threading.Thread(target=packetSender, args=(1,ip,port2_r3,"EOF",seq+1)).start()
 
 
 if __name__ == "__main__":
