@@ -12,7 +12,7 @@ ip_get_r3 = "10.10.7.1"
 port1_d = 45678
 port2_d = 45679
 
-datafromS = ["0","0","0","0"]
+datafromS = ["","","",""]
 totalDatafromS = 0 
 
 mutex_val = 0
@@ -29,7 +29,11 @@ data2 = ""
 expected_seq1 = 0  #0,2,0,2...
 expected_seq2 = 1  #1,3,1,3...
 
-f = open("output1.txt", 'a')
+mutex = threading.Lock()
+
+#f = open("output1.txt", 'w')
+file1 = open("port1.txt","a")
+file2 = open("port2.txt","a")
 
 def writeR3():
     global mutex_val
@@ -96,6 +100,7 @@ def get1_R3(ip,port):
         if data == "EOF":
             isEOF = True
             break
+        print "In thread 1 EXpected seq =  " + str(expected_seq1) + " seq now  = " + str(seq)
 
         if ip_checksum(content) == checksum:  ## correct file arrived
             sock1_R3.sendto("ACK0", addr) #Sends ACK
