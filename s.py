@@ -12,12 +12,13 @@ port1_r3 = 35437
 port2_r3 = 35438
 number_of_ack = 0
 
-window = [0,0]  #if acks received turns to  [1,1]
 
-MAX_SEGMENT = 100
+MAX_SEGMENT = 950
 
-sockR3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sockR3.settimeout(1)  # set timeout to the socket 
+sock1_R3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock2_R3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock1_R3.settimeout(1)  # set timeout to the socket 
+sock2_R3.settimeout(1)  # set timeout to the socket 
 
 # Code taken from http://codewiki.wikispaces.com/ip_checksum.py.
 
@@ -42,86 +43,154 @@ def ip_checksum(data):  # Form the standard IP-suite checksum
     return chr(result / 256) + chr(result % 256)
 
 
-# TODO implement sequence number 
-def packetSender(i,ip,port,segment,seq):
-    global window
-    global number_of_ack
-    # wait for ACK before sending another packet
-    while window[i] == 0:
-        checksum = ip_checksum(segment)  # calculate checksum
-        sockR3.sendto(checksum+ str(seq)+  segment , (ip, port))  #send message to r3
-        print "sending data ",i
-        print segment[0:10]
-        # print "Sending packet ", segment
-        print "Finished sending packet ",i
+def sendR3port1(ip,port):
+    print "Sending from S1 "
+    i = 0
+
+    with open("di.txt") as f:
+        content = f.read()
+    seq = 0
+    print len(content)
+    offset = 0
+    segment = 0
+    while offset < len(content)/2:
+        if offset + MAX_SEGMENT > len(content)/2:
+            segment = content[offset:len(content)/2]
+        else:
+            segment = content[offset:offset+MAX_SEGMENT]
+        offset += MAX_SEGMENT
+        print "offset : ",offset
+        print "segment size : ", len(segment)
+
+        ack_received = False
+        while not ack_received:
+
+            sock1_R3.settimeout(1)
+            checksum = ip_checksum(segment)
+            print "Size of checksum" , len(checksum)
+            sock1_R3.sendto( checksum + str(seq) + segment , (ip, port))  #send message to r3
+            print "Sending packet ", segment[0:10]
+            print "Finished sending packet ", i
+            
+            i += 1
+            try:
+                print "wait for ackk"
+                data, server = sock1_R3.recvfrom(1024) #wait for ACK from r3
+            except: 
+                print "Couldn't get the ACK"
+                pass
+            else:
+                print "Received : ", data
+                if data[3] == '0':
+                    print "ACK Received"
+                    seq = (seq+1) %2
+                    ack_received = True
+                elif data[3] == '1':
+                    print "NAK Received"
+                else:
+                    print "Invalid return data"
+    isEOFacked = False
+
+    while not isEOFacked:                
         try:
-            print "wait for ackk",i
-            data, server = sockR3.recvfrom(1024) #wait for ACK from r3
+            sock1_R3.sendto("EOF",(ip, port))
+        except:
+            "Eof ACKED HATASIII 1"
+            pass
+
+        try:
+            print "wait for ackk1"
+            data, server = sock1_R3.recvfrom(1024) #wait for ACK from r3
         except: 
-            print "Couldn't get the ACK",i
+            print "Couldn't get the ACK1"
             pass
         else:
-            print "Received : ", data
-            if data[3] == '0':
-                print "ACK Received",i
-                window[i] = 1
-                number_of_ack +=1
-            elif data[3] == '1':
-                print "NAK Received",i
+            if data == "ACK0":
+                print "EOF acklandi 1"
+                isEOFacked =True
             else:
-                print "Invalid return data" ,i 
+                print "EOF NAK1"
 
 
-def sendR3(ip):
-    global window
-    global number_of_ack
-    print "Sending from S "
-    
-    with open("di.txt") as f:  #read input file 
+def sendR3port2(ip,port):
+    print "Sending from S2 "
+    i = 0
+
+    with open("di.txt") as f:
         content = f.read()
-    
+    seq  =0
     print len(content)
-    offset = 0  # where to start taking the data sending
-    segment1 = 0 # the data that will be send
-    segment2 = 0
-    seq = 0 # sequence number
+    offset = len(content)/2
+    segment = 0
     while offset < len(content):
-        if offset + MAX_SEGMENT + MAX_SEGMENT> len(content):  # if there is not enough data left to full a mac segment
-            if offset + MAX_SEGMENT < len(content):  #first segment full secons segment not
-                segment1 = content[offset:offset+MAX_SEGMENT]
-                segment2 = content[offset+MAX_SEGMENT:]
-            else:
-                segment1 = content[offset:]
-                segment2 = "0"
+        if offset + MAX_SEGMENT > len(content):
+            segment = content[offset:]
         else:
-            segment1 = content[offset:offset+MAX_SEGMENT]  # there is plenty of data
-            segment2 = content[offset+MAX_SEGMENT:offset+MAX_SEGMENT+MAX_SEGMENT]
-        offset += MAX_SEGMENT + MAX_SEGMENT  #increase the offset
+            segment = content[offset:offset+MAX_SEGMENT]
+        offset += MAX_SEGMENT
         print "offset : ",offset
-        print "segment1 size : ", len(segment1)
-        print "segment2 size : ", len(segment2)
+        print "segment size : ", len(segment)
 
-        window = [0,0]
-        number_of_ack = 0
-        thread1 = threading.Thread(target=packetSender, args=(0,ip,port1_r3,segment1,seq))
-        thread2 = threading.Thread(target=packetSender, args=(1,ip,port2_r3,segment2,seq+1))
+        ack_received = False
+        while not ack_received:
 
-        seq  = (seq+2) %4
-        print "Starting the threads"
-        thread1.start()
-        thread2.start()
-        thread1.join()
-        thread2.join()
-        print "Threads ended"
-        
+            sock2_R3.settimeout(1)
+            checksum = ip_checksum(segment)
+            print "Size of checksum" , len(checksum)
+            sock2_R3.sendto( checksum+ str(seq)+ segment , (ip, port))  #send message to r3
+            print "Sending packet ", segment[0:10]
+            print "Finished sending packet ", i
+            
+            i += 1 
+            try:
+                print "wait for ackk"
+                data, server = sock2_R3.recvfrom(1024) #wait for ACK from r3
+            except: 
+                print "Couldn't get the ACK"
+                pass
+            else:
+                print "Received : ", data
+                if data[3] == '0':
+                    print "ACK Received"
+                    seq =(seq+1)%2
+                    ack_received = True
+                elif data[3] == '1':
+                    print "NAK Received"
+                else:
+                    print "Invalid return data"
+            
+    isEOFacked = False
 
-        
-    thread1 = threading.Thread(target=packetSender, args=(0,ip,port1_r3,"EOF",seq)).start()
-    thread2 = threading.Thread(target=packetSender, args=(1,ip,port2_r3,"EOF",seq+1)).start()
+    while not isEOFacked:                
+        try:
+            sock2_R3.sendto("EOF",(ip, port))
+        except:
+            "Eof ACKED HATASIII 2"
+            pass
+
+        try:
+            print "wait for ackk2"
+            data, server = sock2_R3.recvfrom(1024) #wait for ACK from r3
+        except: 
+            print "Couldn't get the ACK2"
+            pass
+        else:
+            if data == "ACK0":
+                print "EOF acklandi 2"
+                isEOFacked =True
+            else:
+                print "EOF NAK1"
+
+    
 
 
 if __name__ == "__main__":
+ 
+    x = threading.Thread(target=sendR3port1,args=(ip_send_r3,port1_r3))
+    y = threading.Thread(target=sendR3port2,args=(ip_send_r3,port2_r3))
+   
+    x.start()
+    y.start()
 
-    sendR3(ip_send_r3)
 
     print("Done!") 
