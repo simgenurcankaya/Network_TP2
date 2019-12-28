@@ -15,6 +15,7 @@ ip_get_d = "10.10.4.2"
 
 port1_s = 35435 
 port2_s = 35436
+portHS_s = 57084
 
 port1_d = 23426
 port2_d = 23427
@@ -25,9 +26,11 @@ sockS1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockS2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockD1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockD2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sockHS = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 sockS1.bind((ip_get_s,port1_s)) #binding the ports
 sockS2.bind((ip_get_s,port2_s)) #binding the ports
+sockHS.bind((ip_get_s,portHS_s)) #binding the ports
 
 def getS1():
     i = 0
@@ -82,11 +85,17 @@ def getS2( ):
             print "Thread 2 Error when sending the ack to S"
             pass
 
+def getHS( ):
+    
+
 if __name__ == "__main__":
 
     x = threading.Thread(target=getS1, args=())
     y = threading.Thread(target=getS2, args=())
+    z = threading.Thread(target=getHS, args=())
 
     x.start()
     y.start()
+    z.start()
+
     print("Done!") 
