@@ -15,6 +15,7 @@ ip_get_d = "10.10.4.2"
 
 port1_s = 35435 
 port2_s = 35436
+
 portHS_s = 57084
 
 port1_d = 23426
@@ -26,6 +27,7 @@ sockS1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockS2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockD1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockD2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 sockHS = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 sockS1.bind((ip_get_s,port1_s)) #binding the ports
@@ -86,7 +88,21 @@ def getS2( ):
             pass
 
 def getHS( ):
-    
+    i = 0
+    isEOF = False  #Check if the input ended to close the socket.
+    while not isEOF or TimeoutError:
+        print "Thread 3 Now getting from S number " ,i
+        try: 
+            sockHS.settimeout(1)  #set timeout to sockets
+            datafromHS, addressHS = sockHS.recvfrom(1024)  #waiting for data
+            i += 1 
+            if datafromS2 == "EOF":  #EOF reached, send it to the D, then terminate.
+                isEOF = True
+            print "Thread 3 Data received from S, now sending it to S"
+            sockHS.sendto(datafromHS , (ip_send_s,portHS_s)) #sends the received data to S
+        except:
+            print "Thread 3 Error when sending the data to S"
+            pass
 
 if __name__ == "__main__":
 

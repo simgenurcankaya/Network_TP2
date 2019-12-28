@@ -86,7 +86,22 @@ def getS2( ):
             pass
 
 def getHS( ):
-    
+    i = 0
+    isEOF = False  #Check if the input ended to close the socket.
+    while not isEOF or TimeoutError:
+        print "Thread 3 Now getting from S number " ,i
+        try: 
+            sockHS.settimeout(1)  #set timeout to sockets
+            datafromHS, addressHS = sockHS.recvfrom(1024)  #waiting for data
+            i += 1 
+            if datafromS2 == "EOF":  #EOF reached, send it to the D, then terminate.
+                isEOF = True
+            print "Thread 3 Data received from S, now sending it to S"
+            sockHS.sendto(datafromHS , (ip_send_s,portHS_s)) #sends the received data to S
+        except:
+            print "Thread 3 Error when sending the data to S"
+            pass
+
 
 if __name__ == "__main__":
 
