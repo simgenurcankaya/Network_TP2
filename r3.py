@@ -29,6 +29,8 @@ sockD2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sockS1.bind((ip_get_s,port1_s)) #binding the ports
 sockS2.bind((ip_get_s,port2_s)) #binding the ports
 
+
+
 def getS1():
     i = 0
     isEOF = False  #Check if the input ended to close the socket.
@@ -50,7 +52,7 @@ def getS1():
             datafromD, addressD = sockD1.recvfrom(1024) #Waits for ACK from D
             print "Thread 1 Data from D : ", datafromD
             print "Thread 1 Data received from D, now sending it back to S"
-            sockS1.sendto(datafromD1, (ip_send_s,port1_s)) #Sends ACK to S
+            sockS1.sendto(datafromD, addressS1) #Sends ACK to S
         except:
             print "Thread 1 Error when sending the ack to S"
             pass
@@ -83,6 +85,7 @@ def getS2( ):
             pass
 
 if __name__ == "__main__":
+    
 
     x = threading.Thread(target=getS1, args=())
     y = threading.Thread(target=getS2, args=())

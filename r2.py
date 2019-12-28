@@ -6,15 +6,15 @@ import logging
 #For the experiment we only needed S-R2-D implementation,
 #so other ports are not implemented.
 
-#R3 is between S and D , receives from S , sends to D
-ip_send_s = "10.10.2.1"
-ip_get_s = "10.10.2.2"
+#R2 is between S and D , receives from S , sends to D
+ip_send_s = "10.10.2.2"
+ip_get_s = "10.10.2.1"
 
-ip_send_d = "10.10.5.1"
-ip_get_d = "10.10.5.2"
+ip_send_d = "10.10.5.2"
+ip_get_d = "10.10.5.1"
 
-port1_s = 35440 
-port2_s = 35441
+port1_s = 53516
+port2_s = 53517
 portHS_s = 57085
 
 port1_d = 44004
@@ -37,11 +37,11 @@ def getS1():
     isEOF = False  #Check if the input ended to close the socket.
     while not isEOF or TimeoutError:
         print "Thread 1 Now getting from S number " ,i
-        try: 
+        try:
             sockS1.settimeout(1)  #set timeout to both sockets
             sockD1.settimeout(1)
             datafromS1, addressS1 = sockS1.recvfrom(1024)  #waiting for data
-            i += 1 
+            i += 1
             if datafromS1 == "EOF":  #EOF reached, send it to the D, then terminate.
                 isEOF = True
             print "Thread 1 Data received from S, now sending it to D"
@@ -64,11 +64,11 @@ def getS2( ):
     isEOF = False  #Check if the input ended to close the socket.
     while not isEOF or TimeoutError:
         print "Thread 2 Now getting from S number " ,i
-        try: 
+        try:
             sockS2.settimeout(1)  #set timeout to both sockets
             sockD2.settimeout(1)
             datafromS2, addressS2 = sockS2.recvfrom(1024)  #waiting for data
-            i += 1 
+            i += 1
             if datafromS2 == "EOF":  #EOF reached, send it to the D, then terminate.
                 isEOF = True
             print "Thread 2 Data received from S, now sending it to D"
@@ -90,14 +90,19 @@ def getHS( ):
     isEOF = False  #Check if the input ended to close the socket.
     while not isEOF or TimeoutError:
         print "Thread 3 Now getting from S number " ,i
-        try: 
-            sockHS.settimeout(1)  #set timeout to sockets
+        try:
+            sockHS.settimeout(5)  #set timeout to sockets
             datafromHS, addressHS = sockHS.recvfrom(1024)  #waiting for data
-            i += 1 
-            if datafromS2 == "EOF":  #EOF reached, send it to the D, then terminate.
+            i += 1
+            if datafromHS == "EOF":  #EOF reached, send it to the D, then terminate.
                 isEOF = True
             print "Thread 3 Data received from S, now sending it to S"
-            sockHS.sendto(datafromHS , (ip_send_s,portHS_s)) #sends the received data to S
+            try:
+                sockHS.sendto(datafromHS ,addressHS) #sends the received data to S
+            except:
+                print "COuldnt send"
+                pass
+            print "Sended the ack"
         except:
             print "Thread 3 Error when sending the data to S"
             pass
@@ -113,4 +118,4 @@ if __name__ == "__main__":
     y.start()
     z.start()
 
-    print("Done!") 
+    print("Done!")
