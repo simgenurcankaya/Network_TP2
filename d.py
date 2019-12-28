@@ -8,20 +8,37 @@ import time
 # D is the Destination and only receives from and sends to R3.
 ip_send_r3 = "10.10.7.2"
 ip_get_r3 = "10.10.7.1"
+ip_send_r1 = "10.10.4.1"
+ip_get_r1 = "10.10.4.2"
+ip_send_r2= "10.10.5.1"
+ip_get_r2 = "10.10.5.2"
 
 port1_d = 45678
 port2_d = 45679
-
-datafromS = ["","","",""]
-totalDatafromS = 0 
+portR1_1 = 23426
+portR1_2 = 23427
+portR2_1 = 44004
+portR2_2 = 44005
 
 mutex_val = 0
-mutex = threading.Lock()
+
+isMultihomingEOF =False
+receivedDataFromMultihoming = [""] * 7000
 
 sock1_R3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock1_R3.bind((ip_get_r3,port1_d))
 sock2_R3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock2_R3.bind((ip_get_r3,port2_d))
+
+sock1_R2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock1_R2.bind((ip_get_r2,portR2_1))
+sock2_R2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock2_R2.bind((ip_get_r2,portR2_2))
+
+sock1_R1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock1_R1.bind((ip_get_r1,portR1_1))
+sock2_R1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock2_R1.bind((ip_get_r1,portR1_2))
 
 data1 = ""
 data2 = ""
@@ -29,11 +46,7 @@ data2 = ""
 expected_seq1 = 0  #0,2,0,2...
 expected_seq2 = 1  #1,3,1,3...
 
-mutex = threading.Lock()
-
-#f = open("output1.txt", 'w')
-file1 = open("port1.txt","a")
-file2 = open("port2.txt","a")
+f = open("output1.txt", 'a')
 
 def writeR3():
     global mutex_val
@@ -100,7 +113,6 @@ def get1_R3(ip,port):
         if data == "EOF":
             isEOF = True
             break
-        print "In thread 1 EXpected seq =  " + str(expected_seq1) + " seq now  = " + str(seq)
 
         if ip_checksum(content) == checksum:  ## correct file arrived
             sock1_R3.sendto("ACK0", addr) #Sends ACK
@@ -170,9 +182,58 @@ def get2_R3(ip,port):
     print "thread2 finished"
     
 
+def getS(ip,port,sock):
+    global receivedDataFromMultihoming
+    global isMultihomingEOF
+    sock.settimeout(10)
+    while not isMultihomingEOF:
+        try:
+            data, addr = sock.recvfrom(1024) 
+        except:
+            print "Port exception"
+            pass
+        
+        if data == "EOF":
+            isMultihomingEOF = True
+            break
+        
+        checksum = data[:2]
+        seq = data[2:6]
+        content = data[6:]
+       
+        if ip_checksum(content) == checksum:  ## correct file arrived
+            f = open("out1.txt","a")
+            sock2_R3.sendto("ACK0", addr) #Sends ACK    
+            if str(expecting_seq) == received_seq:
+                f.write(content)
+                index = int(seq)
+                receivedDataFromMultihoming[index] = content
+        else: ##wrong file
+            sock2_R3.sendto("ACK1", addr)
+
+def writeOut2():
+    global isMultihomingEOF
+    global receivedDataFromMultihoming
+    while(!isMultihomingEOF)
+        i = 0
+    
+    simgos = open("output2.txt","a")
+    for i in receivedDataFromMultihoming:
+        if i != "":
+            a.write(i[5:] )
+
+            
+    simgos.close()
+
 if __name__ == "__main__":
 
-    thread1 = threading.Thread(target=get1_R3, args=(ip_get_r3,port1_d)).start()
-    thread2 = threading.Thread(target=get2_R3, args=(ip_get_r3,port2_d)).start()
-    thread3 = threading.Thread(target=writeR3, args=()).start()
+    # thread1 = threading.Thread(target=get1_R3, args=(ip_get_r3,port1_d)).start()
+    # thread2 = threading.Thread(target=get2_R3, args=(ip_get_r3,port2_d)).start()
+    # thread3 = threading.Thread(target=writeR3, args=()).start()
+
+    thread4 = threading.Thread(target=getS, args=(ip_get_r1,portR1_1)).start()
+    thread5 = threading.Thread(target=getS, args=(ip_get_r1,portR1_2)).start()
+    thread6 = threading.Thread(target=getS, args=(ip_get_r2,portR2_1)).start()
+    thread7 = threading.Thread(target=getS, args=(ip_get_r2,portR2_2)).start()
+
     print("Done!") 
